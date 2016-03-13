@@ -617,8 +617,8 @@ enum iwm_ucode_sec {
  * For 16.0 uCode and above, there is no differentiation between sections,
  * just an offset to the HW address.
  */
-#define IWM_UCODE_SECTION_MAX 6
-#define IWM_UCODE_FIRST_SECTION_OF_SECOND_CPU	(IWM_UCODE_SECTION_MAX/2)
+#define IWM_UCODE_SECTION_MAX 12
+#define IWM_CPU1_CPU2_SEPARATOR_SECTION 0xFFFFCCCC
 
 /* uCode version contains 4 values: Major/Minor/API/Serial */
 #define IWM_UCODE_MAJOR(ver)	(((ver) & 0xFF000000) >> 24)

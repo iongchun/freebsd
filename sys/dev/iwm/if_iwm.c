@@ -1939,9 +1939,11 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
 	struct iwm_fw_sects *fws;
 	int error, i, w;
-	const void *data;
+	const uint8_t *data;
 	uint32_t dlen;
-	uint32_t offset;
+	int offset;
+	uint32_t dlen, clen;
+	uint32_t doff, dend;
 	int extended_addr;
 
 	sc->sc_uc.uc_intr = 0;
@@ -1950,24 +1952,35 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 	for (i = 0; i < fws->fw_count; i++) {
 		data = fws->fw_sect[i].fws_data;
 		dlen = fws->fw_sect[i].fws_len;
-		offset = fws->fw_sect[i].fws_devoff;
-		extended_addr = (offset >= IWM_FW_MEM_EXTENDED_START &&
-				offset <= IWM_FW_MEM_EXTENDED_END);
-		IWM_DPRINTF(sc, IWM_DEBUG_FIRMWARE_TLV,
-		    "LOAD FIRMWARE type %d offset %u extended %d len %d\n",
-		    ucode_type, offset, extended_addr, dlen);
-		if (extended_addr)
-			iwm_set_bits_prph(sc, IWM_LMPM_CHICK,
-					IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
-		error = iwm_firmware_load_chunk(sc, offset, data, dlen);
-		if (extended_addr)
-			iwm_clear_bits_prph(sc, IWM_LMPM_CHICK,
-					IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
-		if (error) {
-			device_printf(sc->sc_dev,
-			    "%s: chunk %u of %u returned error %02d\n",
-			    __func__, i, fws->fw_count, error);
-			return error;
+		doff = fws->fw_sect[i].fws_devoff;
+		if (doff == IWM_CPU1_CPU2_SEPARATOR_SECTION)
+			break;
+		dend = doff + dlen;
+
+		for (offset = 0; doff < dend; doff += clen, offset += clen) {
+			clen = dend - doff;
+			if (clen > 0x20000)
+				clen = 0x20000;
+			extended_addr = (doff >= IWM_FW_MEM_EXTENDED_START &&
+			    doff <= IWM_FW_MEM_EXTENDED_END);
+			IWM_DPRINTF(sc, IWM_DEBUG_FIRMWARE_TLV,
+			    "LOAD FIRMWARE type %d offset %u extended %d len %d\n",
+			    ucode_type, doff, extended_addr, clen);
+
+			if (extended_addr)
+				iwm_set_bits_prph(sc, IWM_LMPM_CHICK,
+				    IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
+			error = iwm_firmware_load_chunk(sc, doff, data + offset, clen);
+			if (extended_addr)
+				iwm_clear_bits_prph(sc, IWM_LMPM_CHICK,
+				    IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
+
+			if (error) {
+				device_printf(sc->sc_dev,
+				    "%s: chunk %u of %u returned error %02d\n",
+				    __func__, i, fws->fw_count, error);
+				return error;
+			}
 		}
 	}
 
