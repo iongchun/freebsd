@@ -1853,7 +1853,7 @@ iwm_nvm_init(struct iwm_softc *sc)
 	    __func__);
 
 	/* TODO: find correct NVM max size for a section */
-	nvm_buffer = malloc(IWM_OTP_LOW_IMAGE_SIZE, M_DEVBUF, M_NOWAIT);
+	nvm_buffer = malloc(IWM_OTP_LOW_IMAGE_SIZE_FAMILY_7000, M_DEVBUF, M_NOWAIT);
 	if (nvm_buffer == NULL)
 		return (ENOMEM);
 	for (i = 0; i < nitems(nvm_to_read); i++) {
