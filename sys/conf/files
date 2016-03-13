@@ -1675,6 +1675,20 @@ iwm7265.fw			optional iwm7265fw | iwmfw		\
 	compile-with	"${NORMAL_FW}"					\
 	no-obj no-implicit-rule						\
 	clean		"iwm7265.fw"
+iwm7265dfw.c			optional iwm7265dfw | iwmfw		\
+	compile-with	"${AWK} -f $S/tools/fw_stub.awk iwm7265d.fw:iwm7265dfw -miwm7265dfw -c${.TARGET}" \
+	no-implicit-rule before-depend local				\
+	clean		"iwm7265dfw.c"
+iwm7265dfw.fwo			optional iwm7265dfw | iwmfw		\
+	dependency	"iwm7265d.fw"					\
+	compile-with	"${NORMAL_FWO}"					\
+	no-implicit-rule						\
+	clean		"iwm7265dfw.fwo"
+iwm7265d.fw			optional iwm7265dfw | iwmfw		\
+	dependency	"$S/contrib/dev/iwm/iwm-7265d-13.fw.uu" \
+	compile-with	"${NORMAL_FW}"					\
+	no-obj no-implicit-rule						\
+	clean		"iwm7265d.fw"
 dev/iwn/if_iwn.c		optional iwn
 iwn1000fw.c			optional iwn1000fw | iwnfw		\
 	compile-with	"${AWK} -f $S/tools/fw_stub.awk iwn1000.fw:iwn1000fw -miwn1000fw -c${.TARGET}" \

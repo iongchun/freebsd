@@ -4454,6 +4454,8 @@ iwm_intr(void *arg)
 #define	PCI_PRODUCT_INTEL_WL_7260_2	0x08b2
 #define	PCI_PRODUCT_INTEL_WL_7265_1	0x095a
 #define	PCI_PRODUCT_INTEL_WL_7265_2	0x095b
+#define	PCI_PRODUCT_INTEL_WL_3165_1	0x3165
+#define	PCI_PRODUCT_INTEL_WL_3165_2	0x3166
 
 static const struct iwm_devices {
 	uint16_t	device;
@@ -4465,6 +4467,8 @@ static const struct iwm_devices {
 	{ PCI_PRODUCT_INTEL_WL_7260_2, "Intel Dual Band Wireless AC 7260" },
 	{ PCI_PRODUCT_INTEL_WL_7265_1, "Intel Dual Band Wireless AC 7265" },
 	{ PCI_PRODUCT_INTEL_WL_7265_2, "Intel Dual Band Wireless AC 7265" },
+	{ PCI_PRODUCT_INTEL_WL_3165_1, "Intel Dual Band Wireless AC 3165" },
+	{ PCI_PRODUCT_INTEL_WL_3165_2, "Intel Dual Band Wireless AC 3165" },
 };
 
 static int
@@ -4503,6 +4507,11 @@ iwm_dev_check(device_t dev)
 	case PCI_PRODUCT_INTEL_WL_7265_1:
 	case PCI_PRODUCT_INTEL_WL_7265_2:
 		sc->sc_fwname = "iwm7265fw";
+		sc->host_interrupt_operation_mode = 0;
+		return (0);
+	case PCI_PRODUCT_INTEL_WL_3165_1:
+	case PCI_PRODUCT_INTEL_WL_3165_2:
+		sc->sc_fwname = "iwm7265dfw";
 		sc->host_interrupt_operation_mode = 0;
 		return (0);
 	default:
