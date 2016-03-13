@@ -1777,14 +1777,6 @@ iwm_parse_nvm_data(struct iwm_softc *sc,
 	data->sku_cap_band_52GHz_enable = sku & IWM_NVM_SKU_CAP_BAND_52GHZ;
 	data->sku_cap_11n_enable = 0;
 
-	if (!data->valid_tx_ant || !data->valid_rx_ant) {
-		device_printf(sc->sc_dev,
-		    "%s: invalid antennas (0x%x, 0x%x)\n",
-		    __func__, data->valid_tx_ant,
-		    data->valid_rx_ant);
-		return EINVAL;
-	}
-
 	data->n_hw_addrs = le16_to_cpup(nvm_sw + IWM_N_HW_ADDRS);
 
 	data->xtal_calib[0] = *(nvm_calib + IWM_XTAL_CALIB);
