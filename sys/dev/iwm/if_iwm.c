@@ -1930,6 +1930,10 @@ iwm_firmware_load_chunk(struct iwm_softc *sc, uint32_t dst_addr,
 	return error;
 }
 
+/* extended range in FW SRAM */
+#define IWM_FW_MEM_EXTENDED_START	0x40000
+#define IWM_FW_MEM_EXTENDED_END		0x57FFF
+
 static int
 iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
@@ -1938,6 +1942,7 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 	const void *data;
 	uint32_t dlen;
 	uint32_t offset;
+	int extended_addr;
 
 	sc->sc_uc.uc_intr = 0;
 
@@ -1946,10 +1951,18 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 		data = fws->fw_sect[i].fws_data;
 		dlen = fws->fw_sect[i].fws_len;
 		offset = fws->fw_sect[i].fws_devoff;
+		extended_addr = (offset >= IWM_FW_MEM_EXTENDED_START &&
+				offset <= IWM_FW_MEM_EXTENDED_END);
 		IWM_DPRINTF(sc, IWM_DEBUG_FIRMWARE_TLV,
-		    "LOAD FIRMWARE type %d offset %u len %d\n",
-		    ucode_type, offset, dlen);
+		    "LOAD FIRMWARE type %d offset %u extended %d len %d\n",
+		    ucode_type, offset, extended_addr, dlen);
+		if (extended_addr)
+			iwm_set_bits_prph(sc, IWM_LMPM_CHICK,
+					IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
 		error = iwm_firmware_load_chunk(sc, offset, data, dlen);
+		if (extended_addr)
+			iwm_clear_bits_prph(sc, IWM_LMPM_CHICK,
+					IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE);
 		if (error) {
 			device_printf(sc->sc_dev,
 			    "%s: chunk %u of %u returned error %02d\n",

@@ -1032,6 +1032,12 @@ static inline unsigned int IWM_SCD_QUEUE_STATUS_BITS(unsigned int chnl)
 #define IWM_OSC_CLK				(0xa04068)
 #define IWM_OSC_CLK_FORCE_CONTROL		(0x8)
 
+/* FW chicken bits */
+#define IWM_LMPM_CHICK			0xA01FF8
+enum {
+	IWM_LMPM_CHICK_EXTENDED_ADDR_SPACE = (1 << 0),
+};
+
 /*
  * END iwl-prph.h
  */
