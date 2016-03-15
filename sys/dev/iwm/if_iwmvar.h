@@ -449,6 +449,9 @@ struct iwm_softc {
 
 	int			sc_capaflags;
 	int			sc_capa_max_probe_len;
+	uint32_t		sc_capa[IWM_CAPABILITIES_ARRAY_SIZE];
+	uint32_t		sc_capa_api[IWM_API_ARRAY_SIZE];
+	uint32_t		sc_n_scan_channels;
 
 	int			sc_intmask;
 

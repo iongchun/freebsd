@@ -542,12 +542,11 @@ enum iwm_dtd_diode_reg {
  * enum iwl_ucode_tlv_flag - ucode API flags
  * @IWM_UCODE_TLV_FLAGS_PAN: This is PAN capable microcode; this previously
  *	was a separate TLV but moved here to save space.
- * @IWM_UCODE_TLV_FLAGS_NEWSCAN: new uCode scan behaviour on hidden SSID,
+ * @IWM_UCODE_TLV_FLAGS_NEWSCAN: new uCode scan behavior on hidden SSID,
  *	treats good CRC threshold as a boolean
  * @IWM_UCODE_TLV_FLAGS_MFP: This uCode image supports MFP (802.11w).
  * @IWM_UCODE_TLV_FLAGS_P2P: This uCode image supports P2P.
  * @IWM_UCODE_TLV_FLAGS_DW_BC_TABLE: The SCD byte count table is in DWORDS
- * @IWM_UCODE_TLV_FLAGS_UAPSD: This uCode image supports uAPSD
  * @IWM_UCODE_TLV_FLAGS_SHORT_BL: 16 entries of black list instead of 64 in scan
  *	offload profile config command.
  * @IWM_UCODE_TLV_FLAGS_RX_ENERGY_API: supports rx signal strength api
@@ -565,9 +564,16 @@ enum iwm_dtd_diode_reg {
  * @IWM_UCODE_TLV_FLAGS_STA_KEY_CMD: new ADD_STA and ADD_STA_KEY command API
  * @IWM_UCODE_TLV_FLAGS_DEVICE_PS_CMD: support device wide power command
  *	containing CAM (Continuous Active Mode) indication.
- * @IWM_UCODE_TLV_FLAGS_P2P_PS: P2P client power save is supported (only on a
- *	single bound interface).
+ * @IWM_UCODE_TLV_FLAGS_P2P_PM: P2P client supports PM as a stand alone MAC
+ * @IWM_UCODE_TLV_FLAGS_P2P_BSS_PS_DCM: support power save on BSS station and
+ *	P2P client interfaces simultaneously if they are in different bindings.
+ * @IWM_UCODE_TLV_FLAGS_P2P_BSS_PS_SCM: support power save on BSS station and
+ *	P2P client interfaces simultaneously if they are in same bindings.
+ * @IWM_UCODE_TLV_FLAGS_UAPSD_SUPPORT: General support for uAPSD
  * @IWM_UCODE_TLV_FLAGS_P2P_PS_UAPSD: P2P client supports uAPSD power save
+ * @IWM_UCODE_TLV_FLAGS_BCAST_FILTERING: uCode supports broadcast filtering.
+ * @IWM_UCODE_TLV_FLAGS_GO_UAPSD: AP/GO interfaces support uAPSD clients
+ * @IWM_UCODE_TLV_FLAGS_EBS_SUPPORT: this uCode image supports EBS.
  */
 enum iwm_ucode_tlv_flag {
 	IWM_UCODE_TLV_FLAGS_PAN			= (1 << 0),
@@ -589,9 +595,14 @@ enum iwm_ucode_tlv_flag {
 	IWM_UCODE_TLV_FLAGS_SCHED_SCAN		= (1 << 17),
 	IWM_UCODE_TLV_FLAGS_STA_KEY_CMD		= (1 << 19),
 	IWM_UCODE_TLV_FLAGS_DEVICE_PS_CMD	= (1 << 20),
-	IWM_UCODE_TLV_FLAGS_P2P_PS		= (1 << 21),
+	IWM_UCODE_TLV_FLAGS_P2P_PM		= (1 << 21),
+	IWM_UCODE_TLV_FLAGS_BSS_P2P_PS_DCM	= (1 << 22),
+	IWM_UCODE_TLV_FLAGS_BSS_P2P_PS_SCM	= (1 << 23),
 	IWM_UCODE_TLV_FLAGS_UAPSD_SUPPORT	= (1 << 24),
+	IWM_UCODE_TLV_FLAGS_EBS_SUPPORT		= (1 << 25),
 	IWM_UCODE_TLV_FLAGS_P2P_PS_UAPSD	= (1 << 26),
+	IWM_UCODE_TLV_FLAGS_BCAST_FILTERING	= (1 << 29),
+	IWM_UCODE_TLV_FLAGS_GO_UAPSD		= (1 << 30),
 };
 
 /* The default calibrate table size if not specified by firmware file */
@@ -618,6 +629,8 @@ enum iwm_ucode_sec {
  * just an offset to the HW address.
  */
 #define IWM_UCODE_SECTION_MAX 6
+#define IWM_API_ARRAY_SIZE	1
+#define IWM_CAPABILITIES_ARRAY_SIZE	1
 #define IWM_UCODE_FIRST_SECTION_OF_SECOND_CPU	(IWM_UCODE_SECTION_MAX/2)
 
 /* uCode version contains 4 values: Major/Minor/API/Serial */
@@ -720,6 +733,101 @@ struct iwm_ucode_header {
 			uint8_t data[0];		/* in same order as sizes */
 		} v2;
 	} u;
+};
+
+/*
+ * ucode TLVs
+ *
+ * ability to get extension for: flags & capabilities from ucode binaries files
+ */
+struct iwm_ucode_api {
+	uint32_t api_index;
+	uint32_t api_flags;
+} __packed;
+
+struct iwm_ucode_capa {
+	uint32_t api_index;
+	uint32_t api_capa;
+} __packed;
+
+/**
+ * enum iwm_ucode_tlv_api - ucode api
+ * @IWM_UCODE_TLV_API_BT_COEX_SPLIT: new API for BT Coex
+ * @IWM_UCODE_TLV_API_FRAGMENTED_SCAN: This ucode supports active dwell time
+ *	longer than the passive one, which is essential for fragmented scan.
+ * @IWM_UCODE_TLV_API_WIFI_MCC_UPDATE: ucode supports MCC updates with source.
+ * IWM_UCODE_TLV_API_HDC_PHASE_0: ucode supports finer configuration of LTR
+ * @IWM_UCODE_TLV_API_TX_POWER_DEV: new API for tx power.
+ * @IWM_UCODE_TLV_API_BASIC_DWELL: use only basic dwell time in scan command,
+ *	regardless of the band or the number of the probes. FW will calculate
+ *	the actual dwell time.
+ * @IWM_UCODE_TLV_API_SCD_CFG: This firmware can configure the scheduler
+ *	through the dedicated host command.
+ * @IWM_UCODE_TLV_API_SINGLE_SCAN_EBS: EBS is supported for single scans too.
+ * @IWM_UCODE_TLV_API_ASYNC_DTM: Async temperature notifications are supported.
+ * @IWM_UCODE_TLV_API_LQ_SS_PARAMS: Configure STBC/BFER via LQ CMD ss_params
+ * @IWM_UCODE_TLV_API_STATS_V10: uCode supports/uses statistics API version 10
+ * @IWM_UCODE_TLV_API_NEW_VERSION: new versioning format
+ */
+enum iwm_ucode_tlv_api {
+	IWM_UCODE_TLV_API_BT_COEX_SPLIT         = (1 << 3),
+	IWM_UCODE_TLV_API_FRAGMENTED_SCAN	= (1 << 8),
+	IWM_UCODE_TLV_API_WIFI_MCC_UPDATE	= (1 << 9),
+	IWM_UCODE_TLV_API_HDC_PHASE_0		= (1 << 10),
+	IWM_UCODE_TLV_API_TX_POWER_DEV		= (1 << 11),
+	IWM_UCODE_TLV_API_BASIC_DWELL		= (1 << 13),
+	IWM_UCODE_TLV_API_SCD_CFG		= (1 << 15),
+	IWM_UCODE_TLV_API_SINGLE_SCAN_EBS	= (1 << 16),
+	IWM_UCODE_TLV_API_ASYNC_DTM		= (1 << 17),
+	IWM_UCODE_TLV_API_LQ_SS_PARAMS		= (1 << 18),
+	IWM_UCODE_TLV_API_STATS_V10		= (1 << 19),
+	IWM_UCODE_TLV_API_NEW_VERSION		= (1 << 20),
+};
+
+/**
+ * enum iwm_ucode_tlv_capa - ucode capabilities
+ * @IWM_UCODE_TLV_CAPA_D0I3_SUPPORT: supports D0i3
+ * @IWM_UCODE_TLV_CAPA_LAR_SUPPORT: supports Location Aware Regulatory
+ * @IWM_UCODE_TLV_CAPA_UMAC_SCAN: supports UMAC scan.
+ * @IWM_UCODE_TLV_CAPA_BEAMFORMER: supports Beamformer
+ * @IWM_UCODE_TLV_CAPA_TDLS_SUPPORT: support basic TDLS functionality
+ * @IWM_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT: supports insertion of current
+ *	tx power value into TPC Report action frame and Link Measurement Report
+ *	action frame
+ * @IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT: supports updating current
+ *	channel in DS parameter set element in probe requests.
+ * @IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT: supports adding TPC Report IE in
+ *	probe requests.
+ * @IWM_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT: supports Quiet Period requests
+ * @IWM_UCODE_TLV_CAPA_DQA_SUPPORT: supports dynamic queue allocation (DQA),
+ *	which also implies support for the scheduler configuration command
+ * @IWM_UCODE_TLV_CAPA_TDLS_CHANNEL_SWITCH: supports TDLS channel switching
+ * @IWM_UCODE_TLV_CAPA_HOTSPOT_SUPPORT: supports Hot Spot Command
+ * @IWM_UCODE_TLV_CAPA_RADIO_BEACON_STATS: support radio and beacon statistics
+ * @IWM_UCODE_TLV_CAPA_BT_COEX_PLCR: enabled BT Coex packet level co-running
+ * @IWM_UCODE_TLV_CAPA_LAR_MULTI_MCC: ucode supports LAR updates with different
+ *	sources for the MCC. This TLV bit is a future replacement to
+ *	IWM_UCODE_TLV_API_WIFI_MCC_UPDATE. When either is set, multi-source LAR
+ *	is supported.
+ * @IWM_UCODE_TLV_CAPA_BT_COEX_RRC: supports BT Coex RRC
+ */
+enum iwm_ucode_tlv_capa {
+	IWM_UCODE_TLV_CAPA_D0I3_SUPPORT			= (1 << 0),
+	IWM_UCODE_TLV_CAPA_LAR_SUPPORT			= (1 << 1),
+	IWM_UCODE_TLV_CAPA_UMAC_SCAN			= (1 << 2),
+	IWM_UCODE_TLV_CAPA_BEAMFORMER			= (1 << 3),
+	IWM_UCODE_TLV_CAPA_TDLS_SUPPORT			= (1 << 6),
+	IWM_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT	= (1 << 8),
+	IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT	= (1 << 9),
+	IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT	= (1 << 10),
+	IWM_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT		= (1 << 11),
+	IWM_UCODE_TLV_CAPA_DQA_SUPPORT			= (1 << 12),
+	IWM_UCODE_TLV_CAPA_TDLS_CHANNEL_SWITCH		= (1 << 13),
+	IWM_UCODE_TLV_CAPA_HOTSPOT_SUPPORT		= (1 << 18),
+	IWM_UCODE_TLV_CAPA_RADIO_BEACON_STATS		= (1 << 22),
+	IWM_UCODE_TLV_CAPA_BT_COEX_PLCR			= (1 << 28),
+	IWM_UCODE_TLV_CAPA_LAR_MULTI_MCC		= (1 << 29),
+	IWM_UCODE_TLV_CAPA_BT_COEX_RRC			= (1 << 30),
 };
 
 /*

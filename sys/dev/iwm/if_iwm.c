@@ -420,6 +420,48 @@ iwm_set_default_calib(struct iwm_softc *sc, const void *data)
 	return 0;
 }
 
+static int
+iwm_set_ucode_api_flags(struct iwm_softc *sc, const void *data)
+{
+	const struct iwm_ucode_api *ucode_api = data;
+	uint32_t api_index = le32toh(ucode_api->api_index);
+
+	if (api_index >= IWM_API_ARRAY_SIZE) {
+		device_printf(sc->sc_dev,
+		    "api_index %d larger than supported by driver\n",
+		    api_index);
+		return EINVAL;
+	}
+
+	uint32_t value = le32toh(ucode_api->api_flags);
+	sc->sc_capa_api[api_index] = value;
+	IWM_DPRINTF(sc, IWM_DEBUG_FIRMWARE_TLV,
+	    "firmware API flags %d: 0x%x\n", api_index, value);
+
+	return 0;
+}
+
+static int
+iwm_set_ucode_capabilities(struct iwm_softc *sc, const void *data)
+{
+	const struct iwm_ucode_capa *ucode_capa = data;
+	uint32_t api_index = le32toh(ucode_capa->api_index);
+
+	if (api_index >= IWM_CAPABILITIES_ARRAY_SIZE) {
+		device_printf(sc->sc_dev,
+		    "api_index %d larger than supported by driver\n",
+		    api_index);
+		return EINVAL;
+	}
+
+	uint32_t value = le32toh(ucode_capa->api_capa);
+	sc->sc_capa[api_index] = value;
+	IWM_DPRINTF(sc, IWM_DEBUG_FIRMWARE_TLV,
+	    "firmware capability %d: 0x%x\n", api_index, value);
+
+	return 0;
+}
+
 static void
 iwm_fw_info_free(struct iwm_fw_info *fw)
 {
@@ -648,8 +690,54 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 			break;
 
 		case IWM_UCODE_TLV_API_CHANGES_SET:
+			if (tlv_len != sizeof(struct iwm_ucode_api)) {
+				error = EINVAL;
+				device_printf(sc->sc_dev,
+				    "%s: IWM_UCODE_TLV_API_CHANGES_SET: tlv_len (%d) < sizeof(iwm_ucode_api)\n",
+				    __func__,
+				    (int) tlv_len);
+				goto parse_out;
+			}
+			if ((error = iwm_set_ucode_api_flags(sc, tlv_data)) != 0) {
+				device_printf(sc->sc_dev,
+				    "%s: iwm_set_ucode_api_flags() failed: %d\n",
+				    __func__,
+				    error);
+				goto parse_out;
+			}
+			break;
+
 		case IWM_UCODE_TLV_ENABLED_CAPABILITIES:
+			if (tlv_len != sizeof(struct iwm_ucode_capa)) {
+				error = EINVAL;
+				device_printf(sc->sc_dev,
+				    "%s: IWM_UCODE_TLV_ENABLED_CAPABILITIES: tlv_len (%d) < sizeof(iwm_ucode_capa)\n",
+				    __func__,
+				    (int) tlv_len);
+				goto parse_out;
+			}
+			if ((error = iwm_set_ucode_capabilities(sc, tlv_data)) != 0) {
+				device_printf(sc->sc_dev,
+				    "%s: iwm_set_ucode_capabilities() failed: %d\n",
+				    __func__,
+				    error);
+				goto parse_out;
+			}
+			break;
+
 		case IWM_UCODE_TLV_N_SCAN_CHANNELS:
+			if (tlv_len < sizeof(uint32_t)) {
+				device_printf(sc->sc_dev,
+				    "%s: N_SCAN_CHANNELS (%d) < sizeof(uint32_t)\n",
+				    __func__,
+				    (int) tlv_len);
+				error = EINVAL;
+				goto parse_out;
+			}
+			sc->sc_n_scan_channels
+			    = le32toh(*(const uint32_t *)tlv_data);
+			break;
+
 		case IWM_UCODE_TLV_SEC_RT_USNIFFER:
 		case IWM_UCODE_TLV_SDIO_ADMA_ADDR:
 		case IWM_UCODE_TLV_FW_VERSION:
